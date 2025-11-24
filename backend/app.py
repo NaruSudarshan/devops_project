@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
 @app.route('/submit', methods=['POST'])
 def submit_form():
@@ -16,7 +16,6 @@ def submit_form():
 
     print(f"Received submission: Name={name}, Email={email}, Message={message}")
     
-    # In a real app, you might save this to a database
     return jsonify({'message': 'Form submitted successfully!', 'data': {'name': name, 'email': email, 'message': message}}), 200
 
 if __name__ == '__main__':

@@ -6,25 +6,20 @@ const axios = require('axios');
 const app = express();
 const PORT = 3000;
 
-// Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve the form
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// Handle form submission
 app.post('/submit-form', async (req, res) => {
     try {
         const { name, email, message } = req.body;
-        
-        // Send data to Flask backend
-        // In Docker Compose, the service name 'backend' resolves to the backend container IP
+
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000/submit';
-        
+
         const response = await axios.post(backendUrl, new URLSearchParams({
             name,
             email,
