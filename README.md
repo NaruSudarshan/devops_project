@@ -1,150 +1,110 @@
-# Dockerized Node.js & Flask Application
+# DevOps Project: Node.js Frontend + Flask Backend
 
-This project consists of a Node.js/Express frontend and a Flask backend, containerized using Docker.
+This is a simple web application with a Node.js/Express frontend and a Python/Flask backend. The frontend serves a contact form, and the backend handles the form submissions.
 
-## Docker Images
+I've containerized both services using Docker and set up a CI/CD pipeline using Jenkins on an AWS EC2 instance.
 
-You can pull the pre-built images from Docker Hub:
+## Quick Start (Docker)
 
-### Frontend
-```bash
-docker pull sudarshan09/frontend-app:latest
-```
+If you want to run this locally, you can use the pre-built images from Docker Hub.
 
-### Backend
-```bash
-docker pull sudarshan09/backend-app:latest
-```
+1.  **Pull the images:**
+    ```bash
+    docker pull sudarshan09/frontend-app:latest
+    docker pull sudarshan09/backend-app:latest
+    ```
 
-## Running the Application
-
-To run the application using Docker Compose:
-
-```bash
-docker-compose up
-```
-
-The frontend will be available at `http://localhost:3000`.
+2.  **Run with Docker Compose:**
+    ```bash
+    docker-compose up
+    ```
+    The frontend will be running at `http://localhost:3000`.
 
 ## Project Structure
 
-- **frontend**: Node.js Express application serving a contact form.
-- **backend**: Flask application processing form submissions.
+*   `frontend/`: Node.js Express app (serves the UI).
+*   `backend/`: Flask app (API for form handling).
+*   `docker-compose.yaml`: Orchestrates the two services.
 
-# CI/CD Deployment on EC2 with Jenkins
+---
 
-This section covers deploying Flask and Express apps on a single EC2 instance and automating the process with Jenkins.
+## Deployment & CI/CD Setup
 
-## Prerequisites
-- AWS Account
-- GitHub Repository: [https://github.com/NaruSudarshan/devops_project](https://github.com/NaruSudarshan/devops_project)
+I deployed this on a single AWS EC2 instance (Ubuntu 22.04) and used Jenkins to automate the deployment process. Here's a breakdown of the setup.
 
-## Part 1: EC2 Setup (Manual)
+### 1. Server Setup (EC2)
+I used a `t2.micro` instance with Ubuntu 22.04.
+*   **Ports Opened:** 22 (SSH), 80 (HTTP), 3000 (Frontend), 5000 (Backend), 8080 (Jenkins).
+*   **Dependencies Installed:**
+    *   Java (OpenJDK 21) for Jenkins.
+    *   Node.js & npm for the frontend.
+    *   Python3 & pip for the backend.
+    *   `pm2` (globally installed) to keep the apps running in the background.
 
-1.  **Launch EC2 Instance**:
-    - **OS**: Ubuntu Server 22.04 LTS
-    - **Type**: t2.micro (Free Tier)
-    - **Security Group**: Allow SSH (22), HTTP (80), Custom TCP (3000), Custom TCP (5000), Custom TCP (8080).
+### 2. Jenkins Configuration
+I set up Jenkins on port 8080 and created two "Freestyle" projects to handle the deployments.
 
-2.  **Install Dependencies**:
-    SSH into your instance and run:
-    ```bash
-    sudo apt update
-    sudo apt install -y python3-pip nodejs npm git openjdk-21-jdk
-    sudo npm install -g pm2
-    ```
+*   **Backend Job:**
+    *   Pulls code from the `main` branch.
+    *   Installs Python requirements (using `--break-system-packages` for Ubuntu 24.04 compatibility).
+    *   Restarts the Flask app using `pm2`.
 
-3.  **Install Jenkins**:
-    ```bash
-    curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-    echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-    sudo apt update
-    sudo apt install -y jenkins
-    sudo systemctl start jenkins
-    ```
-    - Unlock Jenkins using the password from `/var/lib/jenkins/secrets/initialAdminPassword`.
+*   **Frontend Job:**
+    *   Pulls code from the `main` branch.
+    *   Installs npm packages.
+    *   Restarts the Express app using `pm2`.
 
-## Part 2: Jenkins Freestyle Setup
-
-1.  **Create Backend Job**:
-    - **Type**: Freestyle project
-    - **Source**: Git (URL: `https://github.com/NaruSudarshan/devops_project`)
-    - **Branch**: `*/main`
-    - **Triggers**: GitHub hook trigger for GITScm polling
-    - **Build Steps (Execute Shell)**:
-      ```bash
-      export PATH=$PATH:/usr/local/bin
-      cd backend
-      pip3 install -r requirements.txt --break-system-packages
-      pm2 restart flask-backend || pm2 start app.py --name flask-backend --interpreter python3
-      ```
-
-2.  **Create Frontend Job**:
-    - **Type**: Freestyle project
-    - **Source**: Git (URL: `https://github.com/NaruSudarshan/devops_project`)
-    - **Branch**: `*/main`
-    - **Triggers**: GitHub hook trigger for GITScm polling
-    - **Build Steps (Execute Shell)**:
-      ```bash
-      export PATH=$PATH:/usr/local/bin
-      cd frontend
-      npm install
-      pm2 restart express-frontend || pm2 start server.js --name express-frontend
-      ```
-
-3.  **Configure Webhook**:
-    - In GitHub Repo > Settings > Webhooks.
-    - URL: `http://your-ec2-ip:8080/github-webhook/`
-    - Content type: `application/json`
+Both jobs are triggered automatically by a **GitHub Webhook** whenever I push code to the repository.
 
 ## Screenshots
 
-### Running EC2 Instance
+### Live Application (EC2)
 ![EC2 Instance](./screenshots/ec2_instance.png)
 
 ### Jenkins Dashboard
 ![Jenkins Dashboard](./screenshots/jenkins_dashboard.png)
 
-### Successful Build Status
+### Build Logs
+**Backend Build:**
 ![Backend Build](./screenshots/backend_build.png)
+
+**Frontend Build:**
 ![Frontend Build](./screenshots/frontend_build.png)
 
-## Jenkins Pipeline Execution Logs
+## Logs
 
-### Frontend Build Log
+Here are snippets from the latest successful build logs:
+
+**Frontend:**
 ```text
-Started by user admin
-Running as SYSTEM
-Building in workspace /var/lib/jenkins/workspace/Frontend-Freestyle
-...
-[Frontend-Freestyle] $ /bin/sh -xe /tmp/jenkins5725865414022831128.sh
-+ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin:/usr/bin:/usr/local/bin
-+ cd frontend
-+ npm install
-added 76 packages, and audited 77 packages in 2s
-...
-+ pm2 start server.js --name express-frontend
-[PM2] Starting /var/lib/jenkins/workspace/Frontend-Freestyle/frontend/server.js in fork_mode (1 instance)
-[PM2] Done.
-Finished: SUCCESS
+Started on Nov 25, 2025, 11:31:10 AM
+Started by event from 140.82.115.12 ⇒ http://3.110.174.105:8080/github-webhook/ on Tue Nov 25 11:31:10 UTC 2025
+Using strategy: Default
+[poll] Last Built Revision: Revision 5d85ffdb6203f3280c0d2274ed6f1ee990c73e09 (refs/remotes/origin/main)
+The recommended git tool is: NONE
+No credentials specified
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git ls-remote -h -- https://github.com/NaruSudarshan/devops_project # timeout=10
+Found 1 remote heads on https://github.com/NaruSudarshan/devops_project
+[poll] Latest remote head revision on refs/heads/main is: aa358898d714f0f2a918ffbe9ccaa30d8c587a61
+Done. Took 0.9 sec
+Changes found
 ```
 
-### Backend Build Log
+**Backend:**
 ```text
-Started by user admin
-Running as SYSTEM
-Building in workspace /var/lib/jenkins/workspace/Backend-Freestyle
-...
-[Backend-Freestyle] $ /bin/sh -xe /tmp/jenkins14054670491969934317.sh
-+ cd backend
-+ pip3 install -r requirements.txt --break-system-packages
-...
-Successfully installed Flask-3.0.0 Werkzeug-3.1.3 flask-cors-4.0.0 itsdangerous-2.2.0
-+ pm2 restart flask-backend
-...
-+ pm2 start app.py --name flask-backend --interpreter python3
-[PM2] Starting /var/lib/jenkins/workspace/Backend-Freestyle/backend/app.py in fork_mode (1 instance)
-[PM2] Done.
-Finished: SUCCESS
+Started on Nov 25, 2025, 11:31:10 AM
+Started by event from 140.82.115.12 ⇒ http://3.110.174.105:8080/github-webhook/ on Tue Nov 25 11:31:10 UTC 2025
+Using strategy: Default
+[poll] Last Built Revision: Revision 5d85ffdb6203f3280c0d2274ed6f1ee990c73e09 (refs/remotes/origin/main)
+The recommended git tool is: NONE
+No credentials specified
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git ls-remote -h -- https://github.com/NaruSudarshan/devops_project # timeout=10
+Found 1 remote heads on https://github.com/NaruSudarshan/devops_project
+[poll] Latest remote head revision on refs/heads/main is: aa358898d714f0f2a918ffbe9ccaa30d8c587a61
+Done. Took 0.9 sec
+Changes found
 ```
-
