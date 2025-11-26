@@ -1,6 +1,29 @@
-node_modules/
-.vscode/
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+.terraform.lock.hcl
+
+# Keys
+*.pem
+*.key
+*.pub
+
+# Python
 __pycache__/
 *.pyc
-.env
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log
+
+# OS
 .DS_Store
+
+# Logs
+*.log
+Report.md

@@ -25,6 +25,7 @@ If you want to run this locally, you can use the pre-built images from Docker Hu
 *   `frontend/`: Node.js Express app (serves the UI).
 *   `backend/`: Flask app (API for form handling).
 *   `docker-compose.yaml`: Orchestrates the two services.
+*   `terraform/`: Terraform configurations for AWS deployment.
 
 ---
 
@@ -108,3 +109,98 @@ Found 1 remote heads on https://github.com/NaruSudarshan/devops_project
 Done. Took 0.9 sec
 Changes found
 ```
+
+---
+
+# AWS Terraform Deployment
+
+This section documents the Terraform configurations used to deploy the application on AWS in three different ways.
+
+## Prerequisites
+- [Terraform](https://www.terraform.io/downloads) installed.
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured with `aws configure`.
+- [Docker](https://docs.docker.com/get-docker/) installed (for Part 3).
+
+## Part 1: Single EC2 Instance
+Deploys both applications on a single `t2.micro` instance.
+
+### Deployment
+1. Navigate to `terraform/part1`:
+   ```bash
+   cd terraform/part1
+   ```
+2. Initialize Terraform:
+   ```bash
+   terraform init
+   ```
+3. Apply the configuration:
+   ```bash
+   terraform apply
+   ```
+   Type `yes` to confirm.
+4. Note the `public_ip` from the output.
+5. Access the apps:
+   - Frontend: `http://<public_ip>:3000`
+   - Backend: `http://<public_ip>:5000`
+
+## Part 2: Separate EC2 Instances
+Deploys applications on two separate instances in a custom VPC.
+
+### Deployment
+1. Navigate to `terraform/part2`:
+   ```bash
+   cd terraform/part2
+   ```
+2. Initialize and Apply:
+   ```bash
+   terraform init
+   terraform apply
+   ```
+3. Access the Frontend at `http://<frontend_public_ip>:3000`.
+
+## Part 3: Docker, ECR, ECS
+Deploys applications as Docker containers on ECS (EC2 Launch Type) with an ALB.
+
+### Deployment
+1. **Provision ECR Repositories**:
+   ```bash
+   cd terraform/part3
+   terraform init
+   terraform apply -target=aws_ecr_repository.backend -target=aws_ecr_repository.frontend
+   ```
+2. **Build and Push Docker Images**:
+   Retrieve the repository URLs from the output.
+   
+   **Backend**:
+   ```bash
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <your-account-id>.dkr.ecr.us-east-1.amazonaws.com
+   cd ../../backend
+   docker build -t flask-backend .
+   docker tag flask-backend:latest <ecr_backend_url>:latest
+   docker push <ecr_backend_url>:latest
+   ```
+
+   **Frontend**:
+   ```bash
+   cd ../frontend
+   docker build -t express-frontend .
+   docker tag express-frontend:latest <ecr_frontend_url>:latest
+   docker push <ecr_frontend_url>:latest
+   ```
+
+3. **Deploy Infrastructure**:
+   ```bash
+   cd ../terraform/part3
+   terraform apply
+   ```
+4. Access the application via the `alb_dns_name` output.
+
+## Cleanup
+To destroy the resources, run `terraform destroy` in the respective directories.
+
+## Terraform Files
+
+
+- **`main.tf`**: This is the main recipe file. It tells AWS what resources we want to create (like servers, security groups, or load balancers).
+- **`variables.tf`**: This file stores settings that might change, like the AWS region or the type of server (e.g., `t2.micro`). It makes the code cleaner and easier to update.
+- **`outputs.tf`**: This file tells Terraform what information to show us after it finishes, like the public IP address of the server or the URL of the load balancer.
