@@ -204,3 +204,62 @@ To destroy the resources, run `terraform destroy` in the respective directories.
 - **`main.tf`**: This is the main recipe file. It tells AWS what resources we want to create (like servers, security groups, or load balancers).
 - **`variables.tf`**: This file stores settings that might change, like the AWS region or the type of server (e.g., `t2.micro`). It makes the code cleaner and easier to update.
 - **`outputs.tf`**: This file tells Terraform what information to show us after it finishes, like the public IP address of the server or the URL of the load balancer.
+
+---
+
+# Kubernetes Deployment (Minikube)
+
+This section explains how to deploy the application locally using Minikube.
+
+## Prerequisites
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed and running.
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) installed.
+- Docker installed.
+
+## Deployment Steps
+
+1.  **Start Minikube**:
+    ```bash
+    minikube start
+    ```
+
+2.  **Build Docker Images**:
+    You need to build the images so Minikube can access them.
+    ```bash
+    # Build Backend
+    cd backend
+    docker build -t flask-backend:latest .
+    
+    # Build Frontend
+    cd ../frontend
+    docker build -t express-frontend:latest .
+    ```
+
+3.  **Load Images into Minikube**:
+    Since Minikube runs in its own environment, we need to load the images into it.
+    ```bash
+    minikube image load flask-backend:latest
+    minikube image load express-frontend:latest
+    ```
+
+4.  **Deploy to Kubernetes**:
+    Apply the manifests located in the `k8s` directory.
+    ```bash
+    cd ../
+    kubectl apply -f k8s/
+    ```
+
+5.  **Verify Deployment**:
+    Check if the pods are running:
+    ```bash
+    kubectl get pods
+    kubectl get services
+    ```
+
+6.  **Access the Application**:
+    To access the frontend service (which is type `NodePort`), run:
+    ```bash
+    minikube service frontend-service
+    ```
+    This command will open the application in your default browser.
+

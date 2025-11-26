@@ -27,3 +27,5 @@ npm-debug.log
 # Logs
 *.log
 Report.md
+
+manual_deployment/*
